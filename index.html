@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2026日历生成器 - 自定义图片</title>
+    <title>2026自定义日历生成器</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
@@ -174,16 +174,26 @@
         }
 
         .days-grid {
-            display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; row-gap: 5px;
+            display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; 
+            row-gap: 5px; /* 网格行间距 */
         }
 
+        /* 修改：星期表头高度统一为 50px，与日期格一致，解决行间距视觉差 */
         .weekday-header {
-            font-size: 0.9rem; font-weight: bold; color: var(--text-color); opacity: 0.7; margin-bottom: 8px;
+            font-size: 0.9rem; font-weight: bold; color: var(--text-color); opacity: 0.7; 
+            height: 60px; /* 关键修改：高度与 day-cell 一致 */
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 0;
         }
 
         .day-cell {
-            display: flex; flex-direction: column; align-items: center; height: 50px; font-size: 1.1rem; color: var(--text-color);
+            display: flex; flex-direction: column; align-items: center; 
+            height: 50px; /* 日期格高度 */
+            font-size: 1.1rem; color: var(--text-color);
+            justify-content: flex-start; /* 日期数字靠上，留给节日位置 */
+            padding-top: 5px; /* 微调数字位置 */
         }
+        
         .day-cell.weekend .date-num { color: var(--weekend-color); }
         .day-cell.is-holiday .date-num { color: var(--holiday-color); font-weight: bold; }
         .holiday-label {
@@ -196,6 +206,29 @@
             outline: none; border: 1px dashed transparent; padding: 5px;
         }
         .author-statement:hover, .author-statement:focus { border-color: #4a90e2; opacity: 1; }
+
+        /* --- 自定义模态框样式 --- */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); z-index: 1000;
+            justify-content: center; align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        .modal-box {
+            background: #2d2d2d; color: #fff; padding: 30px; border-radius: 12px;
+            width: 90%; max-width: 450px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #444;
+        }
+        .modal-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; color: #4a90e2; }
+        .modal-content { font-size: 0.95rem; line-height: 1.6; margin-bottom: 25px; color: #ccc; }
+        .modal-btns { display: flex; gap: 15px; justify-content: center; }
+        .modal-btn {
+            padding: 10px 25px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.95rem; font-weight: bold;
+        }
+        .btn-confirm { background: #4a90e2; color: white; }
+        .btn-confirm:hover { background: #357abd; }
+        .btn-cancel { background: #444; color: #ccc; }
+        .btn-cancel:hover { background: #555; }
 
         @media (max-width: 900px) {
             body { flex-direction: column; overflow: auto; }
@@ -309,12 +342,12 @@
 
                 <div class="control-item">
                     <label id="ui-lbl-format">Calendar Language</label>
-                   <select id="month-format" onchange="renderCalendar()">
-    <option value="zh-normal">中文 (一月)</option>
-    <option value="zh-num">数字 (1月)</option>
-    <option value="en-short">English Short (Jan)</option>
-    <option value="en-long">English Long (January)</option>
-</select>
+                    <select id="month-format" onchange="renderCalendar()">
+                        <option value="zh-normal">中文 (一月)</option>
+                        <option value="zh-num">数字 (1月)</option>
+                        <option value="en-short">English Short (Jan)</option>
+                        <option value="en-long">English Long (January)</option>
+                    </select>
                 </div>
 
                 <div class="control-item">
@@ -353,11 +386,11 @@
 
             </div>
 
-            <button class="btn btn-primary" id="download-btn" onclick="exportCalendar()">
+            <button class="btn btn-primary" id="download-btn" onclick="showExportModal()">
                 📥 Export PNG
             </button>
 
-                 <!-- ✅ 2. 不蒜子统计： -->
+            <!-- 不蒜子统计 -->
             <div style="margin-top: 25px; text-align: center; font-size: 0.75rem; color: #777; padding-bottom: 20px;">
                 <span id="busuanzi_container_site_pv" style="display:none;">
                     总访问量 <span id="busuanzi_value_site_pv" style="color: #4a90e2; font-weight: bold;"></span>
@@ -373,7 +406,6 @@
 
     <main class="preview-area">
         <div id="calendar-container">
-            <!-- 全局背景层 -->
             <div class="global-bg-layer" id="global-bg"></div>
             
             <div class="content-layer">
@@ -381,13 +413,30 @@
                 <div class="calendar-grid" id="calendar-grid">
                     <!-- JS 生成月份 -->
                 </div>
-                <!-- 作者声明 -->
                 <div class="author-statement" contenteditable="true" id="author-text">
-                    Designed by MyCalendar 2026
+                    Designed by Syuga 2026
                 </div>
             </div>
         </div>
     </main>
+
+    <!-- 自定义提示模态框 -->
+    <div id="custom-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title" id="modal-title-text">温馨提示 / Reminder</div>
+            <div class="modal-content" id="modal-content-text">
+                请确保您生成的内容仅限于个人使用。<br>擅自拿去商用的好财运会转移到我身上哦:)<br><br>
+                Please ensure that the content you generate is for personal use only.<br> If you use it for commercial purposes without permission, you'll end up broke. You know how it goes :)
+            </div>
+            <div class="modal-btns">
+                <button class="modal-btn btn-cancel" onclick="closeModal()">取消 Cancel</button>
+                <button class="modal-btn btn-confirm" onclick="processExport()">承诺并下载 Download</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入不蒜子脚本 -->
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 
     <script>
         let currentUILang = 'zh'; 
@@ -402,14 +451,14 @@
                 lblLayout: "每行显示月份数", lblFormat: "日历语言格式",
                 lblCardColor: "卡片底色 / 蒙层", lblTextColor: "文字颜色", lblWeekend: "周末高亮", lblHoliday: "节日高亮",
                 btnExport: "📥 导出高清 PNG", author: "作者：Syuga。仅限自用，商用请联系小红书/抖音：又老又脆弱（点击修改或删除）",
-                // 选项翻译
+                // Options
                 optCover: "铺满 (Cover)", optContain: "完整 (Contain)", optStretch: "拉伸 (Stretch)",
                 optCenter: "居中 (Center)", optTop: "顶部 (Top)", optBottom: "底部 (Bottom)", optLeft: "左侧 (Left)", optRight: "右侧 (Right)"
             },
             en: {
                 title: "Calendar Gen", reset: "Reset", step1: "🎯 Target Selection", optGlobal: "🌍 Global Background",
                 months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-                imgSettings: "🖼️ Image Settings", lblUpload: "Upload / Replace", txtUpload: "点击上传 Click to upload...", txtUploaded: "✅ Image Set (Click change)",
+                imgSettings: "🖼️ Image Settings", lblUpload: "Upload / Replace", txtUpload: "Click to upload...", txtUploaded: "✅ Image Set (Click change)",
                 lblOpacity: "Opacity", lblSize: "Size Mode", lblPos: "Position",
                 globalStyle: "🎨 Global Style", lblTransparent: "Transparent Mode (No Bg)", lblBgColor: "Global Bg Color",
                 lblLayout: "Columns per row", lblFormat: "Calendar Format",
@@ -425,8 +474,8 @@
             zh: {
                 months: ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"],
                 monthsNum: ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
-                weekDays: ["日", "一", "二", "三", "四", "五", "六"],
-                // 2026年 完整节日列表
+                // 修改：周一开头
+                weekDays: ["一", "二", "三", "四", "五", "六", "日"],
                 holidays: { 
                     "1-1": "元旦", "1-26": "腊八", "2-11": "小年", "2-14": "情人节", 
                     "2-16": "除夕", "2-17": "春节", "3-3": "元宵", "3-8": "妇女节", "3-12": "植树节",
@@ -440,8 +489,8 @@
             en: {
                 monthsShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
                 monthsLong: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-                weekDays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-                // 2026 Full Holidays (En)
+                // 修改：周一开头
+                weekDays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
                 holidays: { 
                     "1-1": "New Year", "1-26": "Laba Fest", "2-14": "Valentine", "2-17": "Lunar NY", 
                     "3-8": "Women's Day", "4-1": "April Fools", "4-5": "Qingming", 
@@ -509,7 +558,7 @@
             document.getElementById('download-btn').innerText = txt.btnExport;
             
             const authorDiv = document.getElementById('author-text');
-            if(authorDiv.innerText.includes("Designed by") || authorDiv.innerText.includes("日历设计")) {
+            if(authorDiv.innerText.includes("Designed by") || authorDiv.innerText.includes("作者：")) {
                 authorDiv.innerText = txt.author;
             }
         }
@@ -566,15 +615,25 @@
                     daysDiv.appendChild(h);
                 });
 
-                const firstDay = new Date(year, i, 1).getDay();
+                // 修改：计算每周从周一开始的空白格
+                // getDay(): 0(Sun), 1(Mon)... 6(Sat)
+                let firstDay = new Date(year, i, 1).getDay();
+                // 转换: Mon(1)->0, Tue(2)->1, ..., Sat(6)->5, Sun(0)->6
+                firstDay = (firstDay === 0 ? 6 : firstDay - 1);
+
                 const daysInMonth = new Date(year, i+1, 0).getDate();
                 for(let j=0; j<firstDay; j++) daysDiv.appendChild(document.createElement('div'));
 
                 for(let d=1; d<=daysInMonth; d++) {
                     const cell = document.createElement('div');
                     cell.className = 'day-cell';
-                    const wd = new Date(year, i, d).getDay();
-                    if(wd===0 || wd===6) cell.classList.add('weekend');
+                    
+                    // 计算是否周末 (周六和周日，对应新的index 5和6)
+                    const dayOfWeek = new Date(year, i, d).getDay();
+                    if(dayOfWeek === 0 || dayOfWeek === 6) {
+                        cell.classList.add('weekend');
+                    }
+
                     const num = document.createElement('span');
                     num.className = 'date-num';
                     num.innerText = d;
@@ -613,7 +672,6 @@
             const txt = UI_TEXT[currentUILang];
 
             document.getElementById('img-opacity').value = state.opacity;
-            // 更新图片透明度数值显示
             document.getElementById('disp-img-opacity').innerText = state.opacity + '%';
 
             document.getElementById('img-size').value = state.size;
@@ -656,7 +714,6 @@
             
             if (prop === 'opacity') {
                 domEl.style.opacity = value / 100;
-                // 实时更新数值
                 document.getElementById('disp-img-opacity').innerText = value + '%';
             }
             if (prop === 'size') domEl.style.backgroundSize = value;
@@ -690,7 +747,6 @@
             let finalValue = hexValue;
             if (isCardBg) {
                 const alpha = document.getElementById('card-alpha-slider').value;
-                // 更新显示
                 const pct = Math.round((alpha / 255) * 100);
                 document.getElementById('disp-card-alpha').innerText = pct + '%';
                 
@@ -708,7 +764,6 @@
         function resetAll() {
             if(confirm("Reset all settings?")) {
                 appState = JSON.parse(JSON.stringify(defaultState));
-                // 重置颜色数值显示
                 document.getElementById('card-alpha-slider').value = 230;
                 document.getElementById('disp-card-alpha').innerText = '90%';
                 
@@ -725,7 +780,16 @@
             }
         }
 
-        function exportCalendar() {
+        // --- 模态框逻辑 ---
+        function showExportModal() {
+            document.getElementById('custom-modal').style.display = 'flex';
+        }
+        function closeModal() {
+            document.getElementById('custom-modal').style.display = 'none';
+        }
+        function processExport() {
+            closeModal();
+            // 开始导出逻辑
             const original = document.getElementById("calendar-container");
             const btn = document.getElementById('download-btn');
             
@@ -780,14 +844,5 @@
 
         init();
     </script>
-
-           <!-- 1. 引入不蒜子脚本 -->
-<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
-
-<!-- 2. 显示访问量 -->
-<div style="text-align: center; color: #888; margin-top: 20px; font-size: 14px;">
-    共计 <span id="busuanzi_value_site_uv"></span> 人访问了<span id="busuanzi_value_site_pv"></span> 次该网页
-</div>
-    
 </body>
 </html>
